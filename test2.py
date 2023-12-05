@@ -129,6 +129,7 @@ class ArbolBinario(Arbol):
     @property
     def raiz(self):
         return self.__raiz
+    
 
 # Clase de prueba para ArbolBinario
 class TestArbol(unittest.TestCase):
