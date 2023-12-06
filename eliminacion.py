@@ -200,9 +200,10 @@ class Arbol(OperacionesInsercion, OperacionesBusqueda, OperacionesEliminacion, m
     pass
 
 class ArbolBinario(Arbol):
-    def __init__(self, raiz= None) -> None:
-        self.__raiz = raiz 
-        
+
+    def __init__(self, raiz=None) -> None:
+        self.__raiz = raiz
+
     @property
     def raiz(self):
         return self.__raiz
@@ -238,77 +239,130 @@ class ArbolBinario(Arbol):
     def insertarAll(self, valores: Tuple[T], proposicion: Callable[[T, T], bool]) -> None:
         for value in valores:
             self.insertar(value, proposicion)
-
+    
     def buscar(self, valor: T) -> Optional[NodoInterface]:
-        return self._buscar_recursiva(valor, self.raiz)
-
-    def _buscar_recursiva(self, valor: T, nodo_actual: Optional['NodoInterface']) -> Optional[NodoInterface]:
-        if nodo_actual is None or nodo_actual.valor == valor:
-            return nodo_actual
-        if valor < nodo_actual.valor:
-            return self._buscar_recursiva(valor, nodo_actual.izquierda)
-        if valor > nodo_actual.valor:
-            return self._buscar_recursiva(valor, nodo_actual.derecha)
+        return self._buscar_recursiva(valor, self.__raiz)
 
     def buscarAll(self, valor: T) -> Tuple[Optional[NodoInterface]]:
         resultados = []
-        self._buscarAll_recursiva(valor, self.raiz, resultados)
+        self._buscarAll_recursiva(valor, self.__raiz, resultados)
         return tuple(resultados)
-
-    def _buscarAll_recursiva(self, valor: T, nodo_actual: Optional['NodoInterface'], resultados: list) -> None:
-        if nodo_actual is not None:
-            if nodo_actual.valor == valor:
-                resultados.append(nodo_actual)
-            self._buscarAll_recursiva(valor, nodo_actual.izquierda, resultados)
-            self._buscarAll_recursiva(valor, nodo_actual.derecha, resultados)
 
     def buscarWhere(self, proposicion: Callable[[Optional[NodoInterface]], bool]) -> Tuple[Optional[NodoInterface]]:
         resultados = []
-        self._buscarWhere_recursiva(self.raiz, proposicion, resultados)
+        self._buscarWhere_recursiva(proposicion, self.__raiz, resultados)
         return tuple(resultados)
 
-    def _buscarWhere_recursiva(self, nodo_actual: Optional['NodoInterface'], proposicion: Callable[[Optional[NodoInterface]], bool], resultados: list) -> None:
-        if nodo_actual is not None:
-            if proposicion(nodo_actual):
-                resultados.append(nodo_actual)
-            self._buscarWhere_recursiva(nodo_actual.izquierda, proposicion, resultados)
-            self._buscarWhere_recursiva(nodo_actual.derecha, proposicion, resultados)
+    def _buscar_recursiva(self, valor: T, nodo_actual: Optional[NodoInterface]) -> Optional[NodoInterface]:
+        if nodo_actual is None or nodo_actual.valor == valor:
+            return nodo_actual
+
+        if valor < nodo_actual.valor:
+            return self._buscar_recursiva(valor, nodo_actual.izquierda)
+        
+        if valor > nodo_actual.valor:
+            return self._buscar_recursiva(valor, nodo_actual.derecha)
+
+    def _buscarAll_recursiva(self, valor: T, nodo_actual: Optional[NodoInterface], resultados: list[Optional[NodoInterface]]) -> None:
+        if nodo_actual is None:
+            return
+
+        if nodo_actual.valor == valor:
+            resultados.append(nodo_actual)
+
+        self._buscarAll_recursiva(valor, nodo_actual.izquierda, resultados)
+        self._buscarAll_recursiva(valor, nodo_actual.derecha, resultados)
+
+    def _buscarWhere_recursiva(self, proposicion: Callable[[Optional[NodoInterface]], bool], nodo_actual: Optional[NodoInterface], resultados: list[Optional[NodoInterface]]) -> None:
+        if nodo_actual is None:
+            return
+
+        if proposicion(nodo_actual):
+            resultados.append(nodo_actual)
+
+        self._buscarWhere_recursiva(proposicion, nodo_actual.izquierda, resultados)
+        self._buscarWhere_recursiva(proposicion, nodo_actual.derecha, resultados)
         
     def eliminar(self, valor: T) -> None:
-        self.__raiz = self._eliminar_recursiva(self.__raiz, valor)
+        self.__raiz = self._eliminar_recursiva(valor, self.__raiz)
 
-    def _eliminar_recursiva(self, nodo_actual: Optional[NodoInterface], valor: T) -> Optional[NodoInterface]:
+    def _eliminar_recursiva(self, valor: T, nodo_actual: Optional[NodoInterface]) -> Optional[NodoInterface]:
         if nodo_actual is None:
             return None
 
         if valor < nodo_actual.valor:
-            nodo_actual.izquierda = self._eliminar_recursiva(nodo_actual.izquierda, valor)
-            return nodo_actual
-
-        if valor > nodo_actual.valor:
-            nodo_actual.derecha = self._eliminar_recursiva(nodo_actual.derecha, valor)
-            return nodo_actual
-
-        if nodo_actual.izquierda is None:
-            return nodo_actual.derecha
-
-        if nodo_actual.derecha is None:
-            return nodo_actual.izquierda
+            nodo_actual.izquierda = self._eliminar_recursiva(valor, nodo_actual.izquierda)
+        elif valor > nodo_actual.valor:
+            nodo_actual.derecha = self._eliminar_recursiva(valor, nodo_actual.derecha)
+        else:
+            # Nodo a eliminar encontrado
+            nodo_actual = self._eliminar_nodo(nodo_actual)
 
         return nodo_actual
-    
-    def eliminarAll(self, valor: T) -> None:
-        while self.buscar(valor):
-            self.__raiz = self._eliminar_recursiva(self.__raiz, valor)
 
-    
+    def _eliminar_nodo(self, nodo_actual: NodoInterface) -> Optional[NodoInterface]:
+        if nodo_actual.izquierda is None:
+            return nodo_actual.derecha
+        elif nodo_actual.derecha is None:
+            return nodo_actual.izquierda
+
+        # El nodo tiene dos hijos, encontrar el sucesor inmediato
+        sucesor = self._encontrar_minimo(nodo_actual.derecha)
+        # Crear un nuevo nodo con el valor del sucesor
+        nuevo_nodo = Nodo(sucesor.valor)
+        nuevo_nodo.izquierda = nodo_actual.izquierda
+        nuevo_nodo.derecha = self._eliminar_recursiva(sucesor.valor, nodo_actual.derecha)
+
+        return nuevo_nodo
+
+
+    def _encontrar_minimo(self, nodo_actual: NodoInterface) -> NodoInterface:
+        while nodo_actual.izquierda is not None:
+            nodo_actual = nodo_actual.izquierda
+        return nodo_actual
+
+    def eliminarAll(self, valor: T) -> Tuple[Optional[NodoInterface]]:
+        resultados = []
+        self.__raiz = self._eliminarAll_recursiva(valor, self.__raiz, resultados)
+        return tuple(resultados)
+
+    def _eliminarAll_recursiva(self, valor: T, nodo_actual: Optional[NodoInterface], resultados: list[Optional[NodoInterface]]) -> Optional[NodoInterface]:
+        if nodo_actual is None:
+            return None
+
+        if valor == nodo_actual.valor:
+            resultados.append(nodo_actual)
+            nodo_actual = self._eliminarAll_recursiva(valor, nodo_actual.izquierda, resultados)
+            nodo_actual = self._eliminarAll_recursiva(valor, nodo_actual.derecha, resultados)
+        else:
+            nodo_actual.izquierda = self._eliminarAll_recursiva(valor, nodo_actual.izquierda, resultados)
+            nodo_actual.derecha = self._eliminarAll_recursiva(valor, nodo_actual.derecha, resultados)
+
+        return nodo_actual
+
     def eliminarWhere(self, proposicion: Callable[[Optional[NodoInterface]], bool]) -> Tuple[Optional[NodoInterface]]:
-        nodos_a_eliminar = self.buscarWhere(proposicion)
-        for nodo in nodos_a_eliminar:
-            self.__raiz = self._eliminar_recursiva(self.__raiz, nodo.valor)
-        return nodos_a_eliminar
+        resultados = []
+        self.__raiz = self._eliminarWhere_recursiva(proposicion, self.__raiz, resultados)
+        return tuple(resultados)
 
-    # Clase de prueba para ArbolBinario
+    def _eliminarWhere_recursiva(self, proposicion: Callable[[Optional[NodoInterface]], bool], nodo_actual: Optional[NodoInterface], resultados: list[Optional[NodoInterface]]) -> Optional[NodoInterface]:
+        if nodo_actual is None:
+            return None
+
+        if proposicion(nodo_actual):
+            resultados.append(nodo_actual)
+            return None  
+
+        nodo_actual.izquierda = self._eliminarWhere_recursiva(proposicion, nodo_actual.izquierda, resultados)
+        nodo_actual.derecha = self._eliminarWhere_recursiva(proposicion, nodo_actual.derecha, resultados)
+
+        return nodo_actual
+
+
+        
+    
+
+# Clase de prueba para ArbolBinario
 class TestArbol(unittest.TestCase):
     def test_asignar_raiz(self):
         nodo = Nodo(10)
